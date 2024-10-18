@@ -1,4 +1,8 @@
-use std::{env, error::Error, fs};
+use std::{
+    env::{self},
+    error::Error,
+    fs,
+};
 
 pub struct Config {
     pub pattern: String,
@@ -7,20 +11,26 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn build(args: &Vec<String>) -> Result<Config, &'static str> {
-        if args.len() < 3 {
-            Err("not enough arguments")
-        } else {
-            let pattern = args[1].clone();
-            let file_path = args[2].clone();
-            let ignore_case = env::var("IGNORE_CASE").is_ok();
+    pub fn build(mut args: impl Iterator<Item = String>) -> Result<Config, &'static str> {
+        args.next();
 
-            Ok(Config {
-                pattern,
-                file_path,
-                ignore_case,
-            })
-        }
+        let pattern = match args.next() {
+            Some(pat) => pat,
+            None => return Err("Didn't get a query string"),
+        };
+
+        let file_path = match args.next() {
+            Some(pat) => pat,
+            None => return Err("Didn't get file path"),
+        };
+
+        let ignore_case = env::var("IGNORE_CASE").is_ok();
+
+        Ok(Config {
+            pattern,
+            file_path,
+            ignore_case,
+        })
     }
 }
 
@@ -45,28 +55,17 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
 // searching the pattern from the file.
 
 fn search<'a>(query: &str, content: &'a str) -> Vec<&'a str> {
-    let mut result: Vec<&str> = Vec::new();
-
-    for line in content.lines() {
-        if line.contains(query) {
-            result.push(line);
-        }
-    }
-
-    result
+    content
+        .lines()
+        .filter(|line| line.contains(query))
+        .collect()
 }
 
 fn search_case_insensitive<'a>(query: &str, content: &'a str) -> Vec<&'a str> {
-    let query = query.to_lowercase();
-    let mut result: Vec<&str> = Vec::new();
-
-    for line in content.lines() {
-        if line.to_lowercase().contains(&query) {
-            result.push(line);
-        }
-    }
-
-    result
+    content
+        .lines()
+        .filter(|line| line.to_lowercase().contains(&query.to_lowercase()))
+        .collect()
 }
 
 // adding test module.
